@@ -40,6 +40,7 @@
         "@nostr-dev-kit/ndk": "^0.4.5",
         "@nostr-dev-kit/ndk-svelte-components": "^0.2.1",
         "@rgossiaux/svelte-headlessui": "^1.0.2",
-        "mediasoup": "^3.12.3"
+        "mediasoup": "^3.12.3",
+        "nostr-tools": "^1.12.1"
     }
 }
