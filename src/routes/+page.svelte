@@ -25,7 +25,7 @@
             ['audio_server', 'https://nostrnests.com']
         ];
         await ev.publish();
-        goto(`/${name}`);
+        goto(`/r/${ev.id}`);
     }
 </script>
 
