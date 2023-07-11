@@ -10,6 +10,12 @@
     let name = 'test';
 
     async function createRoom() {
+        try {
+            await ndk.assertSigner();
+        } catch (error) {
+            alert('log in first jackass');
+            return;
+        }
         const ev = new NDKEvent(ndk);
         ev.kind = 38001; // TODO: check if this is the final kind
         ev.tags = [
