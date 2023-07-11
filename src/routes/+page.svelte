@@ -7,19 +7,19 @@
     import { NDKEvent } from '@nostr-dev-kit/ndk';
 
     const ndk = get(ndkStore);
-    let name = "test"
+    let name = 'test';
 
     async function createRoom() {
         const ev = new NDKEvent(ndk);
         ev.kind = 38001; // TODO: check if this is the final kind
         ev.tags = [
-            ["alias", name],
-            ["d", name],
-            ["moderator", "c5fb6ecc876e0458e3eca9918e370cbcd376901c58460512fe537a46e58c38bb"],
-            ["audio_server", "https://nostrnests.com"]
-        ]
-        await ev.publish()
-        goto(`/${name}`)
+            ['alias', name],
+            ['d', name],
+            ['moderator', 'c5fb6ecc876e0458e3eca9918e370cbcd376901c58460512fe537a46e58c38bb'],
+            ['audio_server', 'https://nostrnests.com']
+        ];
+        await ev.publish();
+        goto(`/${name}`);
     }
 </script>
 
