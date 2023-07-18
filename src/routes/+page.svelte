@@ -25,7 +25,8 @@
             ['audio_server', 'https://nostrnests.com']
         ];
         await ev.publish();
-        goto(`/r/${ev.id}`);
+        // encodes to naddr style
+        goto(`/r/${ev.encode()}`);
     }
 </script>
 
