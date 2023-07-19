@@ -20,11 +20,13 @@
     const metaRoomSub = ndk.subscribe({ kinds: [38002], authors: [decoded.data.pubkey], "#d": [decoded.data.identifier] }, { closeOnEose: false });
     metaRoomSub.on("event", (ev) => {
         metaRoomEv = ev;
+        roomTitle = ev.getMatchingTags("title")[0][1] || ""
+        roomDesc = ev.getMatchingTags("desc")[0][1] || ""
     });
 
     // meta values
-    $: roomTitle = metaRoomEv?.getMatchingTags("title")[0][1] || ""
-    $: roomDesc = metaRoomEv?.getMatchingTags("desc")[0][1] || ""
+    let roomTitle = ""
+    let roomDesc = ""
 
     async function publishRoomMeta() {
         try {
