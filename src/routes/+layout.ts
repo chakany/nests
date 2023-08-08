@@ -1,5 +1,6 @@
 import ndkStore from '$lib/stores/ndk';
 import { get } from 'svelte/store';
+import { browser } from "$app/environment"
 
 export async function load() {
     const ndk = get(ndkStore);
@@ -13,3 +14,6 @@ export async function load() {
 
     return {};
 }
+
+export const prerender = false;
+export const ssr = false;
