@@ -1,9 +1,10 @@
 <script lang="ts">
     import Modal from "$lib/components/Modal.svelte"
     import { page } from "$app/stores";
+    import { browser } from "$app/environment";
     import ndkStore from '$lib/stores/ndk';
     import { get } from 'svelte/store';
-    import {NDKEvent} from "@nostr-dev-kit/ndk";
+    import {NDKEvent, NDKUser} from "@nostr-dev-kit/ndk";
     import { nip19 } from "nostr-tools";
     const ndk = get(ndkStore)
 
@@ -15,6 +16,7 @@
     const baseRoomSub = ndk.subscribe({ kinds: [38001], authors: [decoded.data.pubkey], "#d": [decoded.data.identifier]}, { closeOnEose: false });
     baseRoomSub.on("event", (ev) => {
         baseRoomEv = ev;
+        baseRoomPresent()
     });
     // TODO: allow mods to have valid events lol
     const metaRoomSub = ndk.subscribe({ kinds: [38002], authors: [decoded.data.pubkey], "#d": [decoded.data.identifier] }, { closeOnEose: false });
@@ -46,6 +48,64 @@
         ]
 
         await ev.publish()
+    }
+
+    // make sure that the presence is rebroadcasted if a signer is added.
+    async function startPresence() {
+        const broadcast = async () => {
+            try {
+                console.log("attempting to rebroadcast presence");
+                if (!ndk.assertSigner()) return // I think this should be awaited? but when I do await it the app doesn't try to sign even if one is present.
+                const presEv = new NDKEvent(ndk)
+                presEv.kind = 38003
+                presEv.tags = [
+                    ["d", `38001:${baseRoomEv?.pubkey}:${baseRoomEv?.getMatchingTags("d")[0][1]}`],
+                    ["present", "true"],
+                    ["hand_raised", "false"]
+                ]
+
+                console.log("rebroadcasting our presence")
+                await presEv.publish()
+            } catch (error) {
+                console.error(error)
+            }
+        }
+        broadcast();
+        setInterval(async () => {
+            broadcast();
+        }, 25000)
+    }
+
+    $: if (baseRoomEv)
+        startPresence();
+
+    interface RoomMember {
+        user: NDKUser,
+        present: boolean,
+        handRaised: boolean,
+        lastUpdated: Date
+    }
+
+    let presentMembers: Map<string, RoomMember> = new Map();
+    // TODO: MAKE THIS EFFICIENT, AND CLEAN!
+    function baseRoomPresent() {
+        const currentTime = new Date();
+        currentTime.setSeconds(currentTime.getSeconds() - 30);
+        const unixTimestamp = Math.floor(currentTime.getTime() / 1000);
+        const roomPresenceSub = ndk.subscribe({ since: unixTimestamp, kinds: [38003], "#d": [`38001:${baseRoomEv?.pubkey}:${baseRoomEv?.getMatchingTags("d")[0][1]}`] }, { closeOnEose: false });
+        roomPresenceSub.on("event", (ev: NDKEvent) => {
+            presentMembers.set(ev.author.hexpubkey(), { user: ev.author, present: ev.getMatchingTags("present")[0][1] === "true", handRaised: ev.getMatchingTags("hand_raised")[0][1] === "true", lastUpdated: new Date() });
+            for (const [id, mem] of presentMembers) {
+                const currentTime = new Date();
+                currentTime.setSeconds(currentTime.getSeconds() - 30);
+                const unixTimestamp = Math.floor(currentTime.getTime() / 1000);
+                if (Math.floor(mem.lastUpdated.getTime() / 1000) < unixTimestamp) {
+                    presentMembers.delete(id);
+                }
+            }
+            presentMembers = presentMembers; // reassign for bullshit svelte reactivity
+            console.log("got presence event", ev)
+        });
     }
 </script>
 
@@ -85,4 +145,9 @@
         </div>
     </Modal>
     <button class="button-primary" on:click={() => editDialog.showModal()}>Edit Room</button>
+
+    <h2>Present Users</h2>
+    {#each [...presentMembers] as [id, mem]}
+        {mem.user.npub} - {mem.present ? "present" : "not present"} - {mem.handRaised ? "hand raised" : "not raised"}
+    {/each}
 {/if}
