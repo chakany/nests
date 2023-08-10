@@ -11,6 +11,7 @@ specifiers:
   '@typescript-eslint/eslint-plugin': ^5.45.0
   '@typescript-eslint/parser': ^5.45.0
   autoprefixer: ^10.4.14
+  cross-env: ^7.0.3
   eslint: ^8.28.0
   eslint-config-prettier: ^8.5.0
   eslint-plugin-svelte: ^2.26.0
@@ -42,6 +43,7 @@ devDependencies:
   '@typescript-eslint/eslint-plugin': 5.62.0_c42x62htuvinjyo6sqia6oy3e4
   '@typescript-eslint/parser': 5.62.0_7haavtekmro7ptbnqmctjaodju
   autoprefixer: 10.4.14_postcss@8.4.27
+  cross-env: 7.0.3
   eslint: 8.46.0
   eslint-config-prettier: 8.10.0_eslint@8.46.0
   eslint-plugin-svelte: 2.32.4_eofu37o22el3mfmyht254oiv24
@@ -1353,6 +1355,14 @@ packages:
     dependencies:
       semver: 7.5.4
     dev: false
+
+  /cross-env/7.0.3:
+    resolution: {integrity: sha512-+/HKd6EgcQCJGh2PSjZuUitQBQynKor4wrFbRg4DtAgS1aWO+gU52xpH7M9ScGgXSYmAVS9bIJ8EzuaGw0oNAw==}
+    engines: {node: '>=10.14', npm: '>=6', yarn: '>=1'}
+    hasBin: true
+    dependencies:
+      cross-spawn: 7.0.3
+    dev: true
 
   /cross-spawn/6.0.5:
     resolution: {integrity: sha512-eTVLrBSt7fjbDygz805pMnstIs2VTBNkRm0qxZd+M7A5XDdxVRWO5MxGBXZhjY4cqLYLdtrGqRf8mBPmzwSpWQ==}
