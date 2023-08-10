@@ -6,20 +6,23 @@
     import { get } from 'svelte/store';
     import {NDKEvent, NDKUser} from "@nostr-dev-kit/ndk";
     import { nip19 } from "nostr-tools";
+    import {Kinds} from "$lib/utils/constants";
     const ndk = get(ndkStore)
 
     const decoded = nip19.decode($page.params.roomid);
 
-    let editDialog;
+    const roomAddr = decoded.data as nip19.AddressPointer
+
+    let editDialog: any;
     let baseRoomEv: NDKEvent | null;
     let metaRoomEv: NDKEvent | null;
-    const baseRoomSub = ndk.subscribe({ kinds: [38001], authors: [decoded.data.pubkey], "#d": [decoded.data.identifier]}, { closeOnEose: false });
+    const baseRoomSub = ndk.subscribe({ kinds: [Kinds.NEST_INFO], authors: [roomAddr.pubkey], "#d": [roomAddr.identifier]}, { closeOnEose: false });
     baseRoomSub.on("event", (ev) => {
         baseRoomEv = ev;
         baseRoomPresent()
     });
     // TODO: allow mods to have valid events lol
-    const metaRoomSub = ndk.subscribe({ kinds: [38002], authors: [decoded.data.pubkey], "#d": [decoded.data.identifier] }, { closeOnEose: false });
+    const metaRoomSub = ndk.subscribe({ kinds: [Kinds.NEST_METADATA], authors: [roomAddr.pubkey], "#d": [roomAddr.identifier] }, { closeOnEose: false });
     metaRoomSub.on("event", (ev) => {
         metaRoomEv = ev;
         roomTitle = ev.getMatchingTags("title")[0][1] || ""
@@ -38,12 +41,12 @@
             return;
         }
         const ev = new NDKEvent(ndk);
-        ev.kind = 38002
+        ev.kind = Kinds.NEST_METADATA
         ev.tags = [
-            ["d", decoded.data.identifier],
+            ["d", roomAddr.identifier],
             ["title", roomTitle],
             ["desc", roomDesc],
-            ["stage", decoded.data.pubkey],
+            ["stage", roomAddr.pubkey],
             ["status", "open"]
         ]
 
@@ -57,9 +60,9 @@
                 console.log("attempting to rebroadcast presence");
                 if (!ndk.assertSigner()) return // I think this should be awaited? but when I do await it the app doesn't try to sign even if one is present.
                 const presEv = new NDKEvent(ndk)
-                presEv.kind = 38003
+                presEv.kind = Kinds.NEST_PRESENCE
                 presEv.tags = [
-                    ["d", `38001:${baseRoomEv?.pubkey}:${baseRoomEv?.getMatchingTags("d")[0][1]}`],
+                    ["d", `${Kinds.NEST_INFO}:${baseRoomEv?.pubkey}:${baseRoomEv?.getMatchingTags("d")[0][1]}`],
                     ["present", "true"],
                     ["hand_raised", "false"]
                 ]
@@ -92,7 +95,7 @@
         const currentTime = new Date();
         currentTime.setSeconds(currentTime.getSeconds() - 30);
         const unixTimestamp = Math.floor(currentTime.getTime() / 1000);
-        const roomPresenceSub = ndk.subscribe({ since: unixTimestamp, kinds: [38003], "#d": [`38001:${baseRoomEv?.pubkey}:${baseRoomEv?.getMatchingTags("d")[0][1]}`] }, { closeOnEose: false });
+        const roomPresenceSub = ndk.subscribe({ since: unixTimestamp, kinds: [Kinds.NEST_PRESENCE], "#d": [`${Kinds.NEST_INFO}:${baseRoomEv?.pubkey}:${baseRoomEv?.getMatchingTags("d")[0][1]}`] }, { closeOnEose: false });
         roomPresenceSub.on("event", (ev: NDKEvent) => {
             presentMembers.set(ev.author.hexpubkey(), { user: ev.author, present: ev.getMatchingTags("present")[0][1] === "true", handRaised: ev.getMatchingTags("hand_raised")[0][1] === "true", lastUpdated: new Date() });
             for (const [id, mem] of presentMembers) {
@@ -145,6 +148,8 @@
         </div>
     </Modal>
     <button class="button-primary" on:click={() => editDialog.showModal()}>Edit Room</button>
+
+    meow
 
     <h2>Present Users</h2>
     {#each [...presentMembers] as [id, mem]}

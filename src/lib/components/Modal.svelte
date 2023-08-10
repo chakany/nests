@@ -1,5 +1,5 @@
 <script lang="ts">
-    export let dialog;
+    export let dialog: any;
 </script>
 
 <dialog
