@@ -17,7 +17,7 @@
     onMount(async () => {
         const storedUser = window.sessionStorage.getItem('nestsCurrentUser');
         if (storedUser) {
-
+            const ndk = get(ndkStore)
             const newUser = new NDKUser({ npub: JSON.parse(storedUser).npub })
             newUser.ndk = ndk;
             currentUser.set(newUser);
