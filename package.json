@@ -38,8 +38,8 @@
     },
     "type": "module",
     "dependencies": {
-        "@nostr-dev-kit/ndk": "^0.8.1",
-        "@nostr-dev-kit/ndk-svelte-components": "^0.2.1",
+        "@nostr-dev-kit/ndk": "^0.8.11",
+        "@nostr-dev-kit/ndk-svelte-components": "^0.8.8-2",
         "@rgossiaux/svelte-headlessui": "^1.0.2",
         "mediasoup": "^3.12.3",
         "nostr-tools": "^1.12.1"
