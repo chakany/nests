@@ -13,6 +13,7 @@
     $: if (savestore && $currentUser) {
         window.sessionStorage.setItem('nestsCurrentUser', JSON.stringify($currentUser));
     }
+    localStorage.debug = 'ndk:*'
 
     onMount(async () => {
         const storedUser = window.sessionStorage.getItem('nestsCurrentUser');
