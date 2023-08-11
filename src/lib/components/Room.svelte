@@ -149,8 +149,6 @@
     </Modal>
     <button class="button-primary" on:click={() => editDialog.showModal()}>Edit Room</button>
 
-    meow
-
     <h2>Present Users</h2>
     {#each [...presentMembers] as [id, mem]}
         {mem.user.npub} - {mem.present ? "present" : "not present"} - {mem.handRaised ? "hand raised" : "not raised"}
