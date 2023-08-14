@@ -1,10 +1,10 @@
 <script lang="ts">
     import Modal from "$lib/components/Modal.svelte"
     import { page } from "$app/stores";
-    import { browser } from "$app/environment";
+    import { onDestroy } from "svelte"
     import ndkStore from '$lib/stores/ndk';
     import { get } from 'svelte/store';
-    import {NDKEvent, NDKUser} from "@nostr-dev-kit/ndk";
+    import {NDKEvent, NDKSubscription, NDKUser} from "@nostr-dev-kit/ndk";
     import { nip19 } from "nostr-tools";
     import {Kinds} from "$lib/utils/constants";
     const ndk = get(ndkStore)
@@ -92,26 +92,43 @@
     }
 
     let presentMembers: Map<string, RoomMember> = new Map();
+    let roomPresenceSub: NDKSubscription | null = null
     // TODO: MAKE THIS EFFICIENT, AND CLEAN!
     function baseRoomPresent() {
         const currentTime = new Date();
         currentTime.setSeconds(currentTime.getSeconds() - 30);
         const unixTimestamp = Math.floor(currentTime.getTime() / 1000);
-        const roomPresenceSub = ndk.subscribe({ since: unixTimestamp, kinds: [Kinds.NEST_PRESENCE], "#d": [`${Kinds.NEST_INFO}:${baseRoomEv?.pubkey}:${baseRoomEv?.getMatchingTags("d")[0][1]}`] }, { closeOnEose: false });
+        roomPresenceSub = ndk.subscribe({since: unixTimestamp - 30, kinds: [Kinds.NEST_PRESENCE], "#d": [`${Kinds.NEST_INFO}:${baseRoomEv?.pubkey}:${baseRoomEv?.getMatchingTags("d")[0][1]}`]}, {closeOnEose: false});
         roomPresenceSub.on("event", (ev: NDKEvent) => {
-            presentMembers.set(ev.author.hexpubkey(), { user: ev.author, present: ev.getMatchingTags("present")[0][1] === "true", handRaised: ev.getMatchingTags("hand_raised")[0][1] === "true", lastUpdated: new Date() });
-            for (const [id, mem] of presentMembers) {
-                const currentTime = new Date();
-                currentTime.setSeconds(currentTime.getSeconds() - 30);
-                const unixTimestamp = Math.floor(currentTime.getTime() / 1000);
-                if (Math.floor(mem.lastUpdated.getTime() / 1000) < unixTimestamp) {
-                    presentMembers.delete(id);
-                }
-            }
-            presentMembers = presentMembers; // reassign for bullshit svelte reactivity
+            presentMembers.set(ev.author.hexpubkey(), {user: ev.author, present: ev.getMatchingTags("present")[0][1] === "true", handRaised: ev.getMatchingTags("hand_raised")[0][1] === "true", lastUpdated: new Date()});
+            cleanPresenceList()
             console.log("got presence event", ev)
-        });
+        })
     }
+
+    let interval = setInterval(cleanPresenceList, 5000);
+
+    function cleanPresenceList() {
+        const currentTime = new Date();
+        currentTime.setSeconds(currentTime.getSeconds() - 30);
+        const unixTimestamp = Math.floor(currentTime.getTime() / 1000);
+        for (const [id, mem] of presentMembers) {
+            if (Math.floor(mem.lastUpdated.getTime() / 1000) < unixTimestamp) {
+                presentMembers.delete(id);
+            }
+        }
+        presentMembers = presentMembers; // reassign for bullshit svelte reactivity
+    }
+
+    // unsub on destroy
+    onDestroy(() => {
+        baseRoomSub.stop();
+        metaRoomSub.stop();
+        roomPresenceSub.stop();
+        // TODO: set presence to not present
+        // TODO: also clear the broadcast interval
+        clearInterval(interval);
+    });
 </script>
 
 {#if baseRoomEv}
