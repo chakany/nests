@@ -6,7 +6,10 @@
     import { get } from 'svelte/store';
     import {NDKEvent, NDKSubscription, NDKUser} from "@nostr-dev-kit/ndk";
     import { nip19 } from "nostr-tools";
-    import {Kinds} from "$lib/utils/constants";
+    import { Kinds, RoomMember } from "$lib/utils/constants";
+    import Profile from "$lib/components/Room/Profile.svelte";
+    import { RelayList } from "@nostr-dev-kit/ndk-svelte-components";
+
     const ndk = get(ndkStore)
 
     const decoded = nip19.decode($page.params.roomid);
@@ -84,13 +87,6 @@
     $: if (baseRoomEv)
         startPresence();
 
-    interface RoomMember {
-        user: NDKUser,
-        present: boolean,
-        handRaised: boolean,
-        lastUpdated: Date
-    }
-
     let presentMembers: Map<string, RoomMember> = new Map();
     let roomPresenceSub: NDKSubscription | null = null
     // TODO: MAKE THIS EFFICIENT, AND CLEAN!
@@ -132,6 +128,7 @@
 </script>
 
 {#if baseRoomEv}
+    <RelayList ndk={ndk} />
     <div class="flex flex-col">
         <span>ROOM TITLE: {roomTitle}</span>
         <span>ROOM DESC: {roomDesc}</span>
@@ -178,6 +175,6 @@
 
     <h2>Present Users</h2>
     {#each [...presentMembers] as [id, mem]}
-        {mem.user.npub} - {mem.present ? "present" : "not present"} - {mem.handRaised ? "hand raised" : "not raised"}
+        <Profile profile={mem} />
     {/each}
 {/if}
