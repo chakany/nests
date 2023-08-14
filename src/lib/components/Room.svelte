@@ -53,29 +53,31 @@
         await ev.publish()
     }
 
+    let handRaised = false;
+    async function broadcastPresence() {
+        try {
+            console.log("attempting to rebroadcast presence");
+            if (!ndk.assertSigner()) return // I think this should be awaited? but when I do await it the app doesn't try to sign even if one is present.
+            const presEv = new NDKEvent(ndk)
+            presEv.kind = Kinds.NEST_PRESENCE
+            presEv.tags = [
+                ["d", `${Kinds.NEST_INFO}:${baseRoomEv?.pubkey}:${baseRoomEv?.getMatchingTags("d")[0][1]}`],
+                ["present", "true"],
+                ["hand_raised", handRaised.toString()]
+            ]
+
+            console.log("rebroadcasting our presence")
+            await presEv.publish()
+        } catch (error) {
+            console.error(error)
+        }
+    }
+
     // make sure that the presence is rebroadcasted if a signer is added.
     async function startPresence() {
-        const broadcast = async () => {
-            try {
-                console.log("attempting to rebroadcast presence");
-                if (!ndk.assertSigner()) return // I think this should be awaited? but when I do await it the app doesn't try to sign even if one is present.
-                const presEv = new NDKEvent(ndk)
-                presEv.kind = Kinds.NEST_PRESENCE
-                presEv.tags = [
-                    ["d", `${Kinds.NEST_INFO}:${baseRoomEv?.pubkey}:${baseRoomEv?.getMatchingTags("d")[0][1]}`],
-                    ["present", "true"],
-                    ["hand_raised", "false"]
-                ]
-
-                console.log("rebroadcasting our presence")
-                await presEv.publish()
-            } catch (error) {
-                console.error(error)
-            }
-        }
-        broadcast();
+        broadcastPresence();
         setInterval(async () => {
-            broadcast();
+            broadcastPresence();
         }, 25000)
     }
 
@@ -148,6 +150,14 @@
         </div>
     </Modal>
     <button class="button-primary" on:click={() => editDialog.showModal()}>Edit Room</button>
+
+    <span on:click={broadcastPresence}>
+        {#if handRaised}
+            <button class="button-primary" on:click={() => handRaised = false}>Lower Hand</button>
+        {:else}
+            <button class="button-primary" on:click={() => handRaised = true}>Raise Hand</button>
+        {/if}
+    </span>
 
     <h2>Present Users</h2>
     {#each [...presentMembers] as [id, mem]}
