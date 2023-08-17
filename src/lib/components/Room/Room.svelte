@@ -8,7 +8,7 @@
     import { nip19 } from "nostr-tools";
     import {Kinds, type RoomMember, type StageMember} from "$lib/utils/constants";
     import Profile from "$lib/components/Room/Profile.svelte";
-    import { RelayList } from "@nostr-dev-kit/ndk-svelte-components";
+    import {Name, RelayList} from "@nostr-dev-kit/ndk-svelte-components";
 
     const ndk = get(ndkStore)
     const loadedDate = new Date(); // see StageMember
@@ -18,38 +18,68 @@
     const roomAddr = decoded.data as nip19.AddressPointer
 
     let editDialog: any;
+    let stageDialog: any;
+    let moderatorDialog: any;
     let baseRoomEv: NDKEvent | null;
+    $: isModerator = baseRoomEv?.getMatchingTags("moderator").filter((t) => t[1] == ourPubkey)
     let metaRoomEv: NDKEvent | null;
     const baseRoomSub = ndk.subscribe({ kinds: [Kinds.NEST_INFO], authors: [roomAddr.pubkey], "#d": [roomAddr.identifier]}, { closeOnEose: false });
     baseRoomSub.on("event", (ev) => {
         baseRoomEv = ev;
         baseRoomPresent()
     });
-    // TODO: allow mods to have valid events lol
-    const metaRoomSub = ndk.subscribe({ kinds: [Kinds.NEST_METADATA], authors: [roomAddr.pubkey], "#d": [roomAddr.identifier] }, { closeOnEose: false });
-    metaRoomSub.on("event", (ev) => {
-        metaRoomEv = ev;
-        roomTitle = ev.getMatchingTags("title")[0][1] || ""
-        roomDesc = ev.getMatchingTags("desc")[0][1] || ""
-        const permittedSpeakers = ev.getMatchingTags("stage")
-        const oldStage = new Map(stageMembers)
-        stageMembers.clear() // to clearout everyone that should be there
-        for (const entry of permittedSpeakers) {
-            const oldEntry = oldStage.get(entry[1]);
-            const perms = entry[2]?.join(",")
-            stageMembers.set(entry[1], {
-                lastSeen: loadedDate,
-                lastOnStageTime: oldEntry?.lastOnStageTime || new Date(),
-                lastOnStage: oldEntry?.lastOnStage || false,
-                hasPersistentAccess: oldEntry?.hasPersistentAccess || perms.contains("persistent")
-            })
-        }
-        stageMembers = stageMembers
-    });
-
+    let metaRoomSub;
+    function subToMetaEvents(authors: string[]) {
+        metaRoomSub = ndk.subscribe({kinds: [Kinds.NEST_METADATA], authors, "#d": [roomAddr.identifier]}, {closeOnEose: false});
+        metaRoomSub.on("event", (ev) => {
+            metaRoomEv = ev;
+            roomTitle = ev.getMatchingTags("title")[0][1] || ""
+            roomDesc = ev.getMatchingTags("desc")[0][1] || ""
+            const permittedSpeakers = ev.getMatchingTags("stage")
+            const oldStage = new Map(stageMembers)
+            stageMembers.clear() // to clearout everyone that should be there
+            for (const entry of permittedSpeakers) {
+                const oldEntry = oldStage.get(entry[1]);
+                const perms = entry[2]?.join(",")
+                stageMembers.set(entry[1], {
+                    lastSeen: loadedDate,
+                    lastOnStageTime: oldEntry?.lastOnStageTime || new Date(),
+                    lastOnStage: oldEntry?.lastOnStage || false,
+                    hasPersistentAccess: oldEntry?.hasPersistentAccess || perms.contains("persistent")
+                })
+            }
+            stageMembers = stageMembers
+        });
+    }
+    subToMetaEvents([roomAddr.pubkey])
     // meta values
     let roomTitle = ""
     let roomDesc = ""
+
+    async function toggleMod(id: string) {
+        try {
+            const ev = new NDKEvent(ndk);
+            ev.kind = Kinds.NEST_INFO;
+            // filter out the id if it's there or add it in if it isn't there
+            const mods = baseRoomEv?.getMatchingTags("moderator").filter((t) => t[1] != id) || []
+            if (mods.length == baseRoomEv?.getMatchingTags("moderator").length) {
+                mods.push(["moderator", id])
+            }
+            ev.tags = [
+                ["d", roomAddr.identifier],
+                ["alias", baseRoomEv?.getMatchingTags("alias")[0][1] || ""],
+                ["audio_server", baseRoomEv?.getMatchingTags("audio_server")[0][1] || ""],
+                ...mods
+            ]
+            await ev.publish()
+            metaRoomSub.stop();
+            const authedKeys = []
+            mods.filter((t) => authedKeys.push(t[1]))
+            subToMetaEvents(authedKeys);
+        } catch (error) {
+            console.error(error)
+        }
+    }
 
     async function publishRoomMeta() {
         try {
@@ -221,6 +251,31 @@
             <button class="button-primary" on:click={() => handRaised = true}>Raise Hand</button>
         {/if}
     </span>
+
+    {#if isModerator}
+        YOU ARE A MODERATOR!!!!
+    {/if}
+
+    {#if baseRoomEv?.pubkey === ourPubkey}
+        <button class="button-primary" on:click={() => moderatorDialog.showModal()}>Appoint Moderator</button>
+        <Modal bind:dialog={moderatorDialog}>
+            <div class="flex flex-col">
+                {#each [...roomMembers] as [id, mem]}
+                    <div class="flex gap-3">
+                        <Name ndk={ndk} user={mem.user} />
+                        {#if baseRoomEv && baseRoomEv.getMatchingTags("moderator").filter((t) => t[1] === id).length > 0}
+                            <button class="button-primary" on:click={() => toggleMod(id)}>Remove Moderator</button>
+                        {:else}
+                            <button class="button-primary" on:click={() => toggleMod(id)}>Add Moderator</button>
+                        {/if}
+                    </div>
+                {/each}
+            </div>
+            <div class="flex gap-2">
+                <button class="button-primary" on:click={() => {moderatorDialog.close()}}>Done</button>
+            </div>
+        </Modal>
+    {/if}
 
     <h2>Stage</h2>
     {#each [...stageMembers] as [id, mem]}
