@@ -11,3 +11,9 @@ export interface RoomMember {
     handRaised: boolean,
     lastUpdated: Date
 }
+export interface StageMember {
+    lastSeen: Date, // default to now upon loading for reasons
+    lastOnStageTime: Date,
+    lastOnStage: boolean,
+    hasPersistentAccess: boolean
+}

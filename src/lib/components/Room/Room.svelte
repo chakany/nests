@@ -4,13 +4,14 @@
     import { onDestroy } from "svelte"
     import ndkStore from '$lib/stores/ndk';
     import { get } from 'svelte/store';
-    import {NDKEvent, NDKSubscription, NDKUser} from "@nostr-dev-kit/ndk";
+    import {NDKEvent, NDKSubscription} from "@nostr-dev-kit/ndk";
     import { nip19 } from "nostr-tools";
-    import { Kinds, RoomMember } from "$lib/utils/constants";
+    import {Kinds, type RoomMember, type StageMember} from "$lib/utils/constants";
     import Profile from "$lib/components/Room/Profile.svelte";
     import { RelayList } from "@nostr-dev-kit/ndk-svelte-components";
 
     const ndk = get(ndkStore)
+    const loadedDate = new Date(); // see StageMember
 
     const decoded = nip19.decode($page.params.roomid);
 
@@ -30,6 +31,20 @@
         metaRoomEv = ev;
         roomTitle = ev.getMatchingTags("title")[0][1] || ""
         roomDesc = ev.getMatchingTags("desc")[0][1] || ""
+        const permittedSpeakers = ev.getMatchingTags("stage")
+        const oldStage = new Map(stageMembers)
+        stageMembers.clear() // to clearout everyone that should be there
+        for (const entry of permittedSpeakers) {
+            const oldEntry = oldStage.get(entry[1]);
+            const perms = entry[2]?.join(",")
+            stageMembers.set(entry[1], {
+                lastSeen: loadedDate,
+                lastOnStageTime: oldEntry?.lastOnStageTime || new Date(),
+                lastOnStage: oldEntry?.lastOnStage || false,
+                hasPersistentAccess: oldEntry?.hasPersistentAccess || perms.contains("persistent")
+            })
+        }
+        stageMembers = stageMembers
     });
 
     // meta values
@@ -56,7 +71,9 @@
         await ev.publish()
     }
 
+    let onStage = false;
     let handRaised = false;
+    let ourPubkey = ""; // A little hackey? TODO: FIX
     async function broadcastPresence() {
         try {
             console.log("attempting to rebroadcast presence");
@@ -66,11 +83,13 @@
             presEv.tags = [
                 ["d", `${Kinds.NEST_INFO}:${baseRoomEv?.pubkey}:${baseRoomEv?.getMatchingTags("d")[0][1]}`],
                 ["present", "true"],
-                ["hand_raised", handRaised.toString()]
+                ["hand_raised", handRaised.toString()],
+                ["on_stage", onStage.toString()]
             ]
 
             console.log("rebroadcasting our presence")
             await presEv.publish()
+            ourPubkey = presEv.pubkey;
         } catch (error) {
             console.error(error)
         }
@@ -87,7 +106,8 @@
     $: if (baseRoomEv)
         startPresence();
 
-    let presentMembers: Map<string, RoomMember> = new Map();
+    let roomMembers: Map<string, RoomMember> = new Map();
+    let stageMembers: Map<string, StageMember> = new Map();
     let roomPresenceSub: NDKSubscription | null = null
     // TODO: MAKE THIS EFFICIENT, AND CLEAN!
     function baseRoomPresent() {
@@ -96,7 +116,29 @@
         const unixTimestamp = Math.floor(currentTime.getTime() / 1000);
         roomPresenceSub = ndk.subscribe({since: unixTimestamp - 30, kinds: [Kinds.NEST_PRESENCE], "#d": [`${Kinds.NEST_INFO}:${baseRoomEv?.pubkey}:${baseRoomEv?.getMatchingTags("d")[0][1]}`]}, {closeOnEose: false});
         roomPresenceSub.on("event", (ev: NDKEvent) => {
-            presentMembers.set(ev.author.hexpubkey(), {user: ev.author, present: ev.getMatchingTags("present")[0][1] === "true", handRaised: ev.getMatchingTags("hand_raised")[0][1] === "true", lastUpdated: new Date()});
+            if (ev.pubkey == ourPubkey) {
+                onStage = ev.getMatchingTags("on_stage")[0][1] == "true"
+                handRaised = ev.getMatchingTags("hand_raised")[0][1] == "true"
+            }
+            const pubkey = ev.author.hexpubkey()
+            roomMembers.set(pubkey,
+                {
+                    user: ev.author,
+                    present: ev.getMatchingTags("present")[0][1] === "true",
+                    handRaised: ev.getMatchingTags("hand_raised")[0][1] === "true",
+                    lastUpdated: new Date(),
+                }
+            );
+            const memberStage = metaRoomEv?.getMatchingTags("stage").filter((value) => value[1] == pubkey);
+            if (memberStage && memberStage.length > 0) {
+                const joinedStagePerms = memberStage[2]?.join(",") || ""
+                stageMembers.set(pubkey, {
+                    lastSeen: new Date(),
+                    lastOnStageTime: new Date(), // TODO: get this proper working
+                    lastOnStage: ev.getMatchingTags("on_stage")[0][1] == "true",
+                    hasPersistentAccess: joinedStagePerms.includes("persistent")
+                })
+            }
             cleanPresenceList()
             console.log("got presence event", ev)
         })
@@ -108,12 +150,14 @@
         const currentTime = new Date();
         currentTime.setSeconds(currentTime.getSeconds() - 30);
         const unixTimestamp = Math.floor(currentTime.getTime() / 1000);
-        for (const [id, mem] of presentMembers) {
+        for (const [id, mem] of roomMembers) {
             if (Math.floor(mem.lastUpdated.getTime() / 1000) < unixTimestamp) {
-                presentMembers.delete(id);
+                roomMembers.delete(id);
             }
         }
-        presentMembers = presentMembers; // reassign for bullshit svelte reactivity
+        for (const [id, mem] of stageMembers)
+
+        roomMembers = roomMembers; // reassign for bullshit svelte reactivity
     }
 
     // unsub on destroy
@@ -166,6 +210,11 @@
     <button class="button-primary" on:click={() => editDialog.showModal()}>Edit Room</button>
 
     <span on:click={broadcastPresence}>
+        {#if onStage}
+            <button class="button-primary" on:click={() => onStage = false}>Leave Stage</button>
+        {:else}
+            <button class="button-primary" on:click={() => onStage = true}>Go on Stage</button>
+        {/if}
         {#if handRaised}
             <button class="button-primary" on:click={() => handRaised = false}>Lower Hand</button>
         {:else}
@@ -173,8 +222,16 @@
         {/if}
     </span>
 
-    <h2>Present Users</h2>
-    {#each [...presentMembers] as [id, mem]}
-        <Profile profile={mem} />
+    <h2>Stage</h2>
+    {#each [...stageMembers] as [id, mem]}
+        {#if mem.lastOnStage}
+            <Profile ndk={ndk} profile={roomMembers.get(id)} stage={mem} />
+        {/if}
+    {/each}
+    <h2>Audience</h2>
+    {#each [...roomMembers] as [id, mem]}
+        {#if !(!!stageMembers.get(id)?.lastOnStage)}
+            <Profile ndk={ndk} profile={mem} />
+        {/if}
     {/each}
 {/if}
