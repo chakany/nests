@@ -81,6 +81,28 @@
         }
     }
 
+    async function toggleStage(id: string) {
+        try {
+            const ev = new NDKEvent(ndk);
+            ev.kind = Kinds.NEST_METADATA;
+            // filter out the id if it's there or add it in if it isn't there
+            const speakers = metaRoomEv?.getMatchingTags("stage").filter((t) => t[1] != id) || []
+            if (speakers.length == metaRoomEv?.getMatchingTags("stage").length) {
+                speakers.push(["stage", id])
+            }
+            ev.tags = [
+                ["d", metaRoomEv?.getMatchingTags("d")[0][1] || ""],
+                ["title", metaRoomEv?.getMatchingTags("title")[0][1] || ""],
+                ["desc", metaRoomEv?.getMatchingTags("desc")[0][1] || ""],
+                ["status", metaRoomEv?.getMatchingTags("status")[0][1] || "open"],
+                ...speakers
+            ]
+            await ev.publish()
+        } catch (error) {
+            console.error(error)
+        }
+    }
+
     async function publishRoomMeta() {
         try {
             await ndk.assertSigner();
@@ -240,10 +262,12 @@
     <button class="button-primary" on:click={() => editDialog.showModal()}>Edit Room</button>
 
     <span on:click={broadcastPresence}>
-        {#if onStage}
-            <button class="button-primary" on:click={() => onStage = false}>Leave Stage</button>
-        {:else}
-            <button class="button-primary" on:click={() => onStage = true}>Go on Stage</button>
+        {#if metaRoomEv.getMatchingTags("stage").filter((t) => t[1] === ourPubkey).length > 0}
+            {#if onStage}
+                <button class="button-primary" on:click={() => onStage = false}>Leave Stage</button>
+            {:else}
+                <button class="button-primary" on:click={() => onStage = true}>Join Stage</button>
+            {/if}
         {/if}
         {#if handRaised}
             <button class="button-primary" on:click={() => handRaised = false}>Lower Hand</button>
@@ -253,7 +277,24 @@
     </span>
 
     {#if isModerator}
-        YOU ARE A MODERATOR!!!!
+        <button class="button-primary" on:click={() => stageDialog.showModal()}>Stage Settings</button>
+        <Modal bind:dialog={stageDialog}>
+            <div class="flex flex-col">
+                {#each [...roomMembers] as [id, mem]}
+                    <div class="flex gap-3">
+                        <Name ndk={ndk} npub={mem.user.npub} />
+                        {#if metaRoomEv && metaRoomEv.getMatchingTags("stage").filter((t) => t[1] === id).length > 0}
+                            <button class="button-primary" on:click={() => toggleStage(id)}>Remove Stage Permission</button>
+                        {:else}
+                            <button class="button-primary" on:click={() => toggleStage(id)}>Give Stage Permission</button>
+                        {/if}
+                    </div>
+                {/each}
+            </div>
+            <div class="flex gap-2">
+                <button class="button-primary" on:click={() => {stageDialog.close()}}>Done</button>
+            </div>
+        </Modal>
     {/if}
 
     {#if baseRoomEv?.pubkey === ourPubkey}
@@ -262,7 +303,7 @@
             <div class="flex flex-col">
                 {#each [...roomMembers] as [id, mem]}
                     <div class="flex gap-3">
-                        <Name ndk={ndk} user={mem.user} />
+                        <Name ndk={ndk} npub={mem.user.npub} />
                         {#if baseRoomEv && baseRoomEv.getMatchingTags("moderator").filter((t) => t[1] === id).length > 0}
                             <button class="button-primary" on:click={() => toggleMod(id)}>Remove Moderator</button>
                         {:else}
