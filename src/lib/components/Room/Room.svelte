@@ -77,8 +77,8 @@
                 ...mods
             ]
             await ev.publish()
-            metaRoomSub.stop();
-            const authedKeys = []
+            metaRoomSub?.stop();
+            const authedKeys: string[] = []
             mods.filter((t) => authedKeys.push(t[1]))
             subToMetaEvents(authedKeys);
         } catch (error) {
