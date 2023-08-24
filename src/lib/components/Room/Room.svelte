@@ -21,14 +21,19 @@
     let stageDialog: any;
     let moderatorDialog: any;
     let baseRoomEv: NDKEvent | null;
-    $: isModerator = baseRoomEv?.getMatchingTags("moderator").filter((t) => t[1] == ourPubkey)
+    $: isModerator = (baseRoomEv?.getMatchingTags("moderator").filter((t) => t[1] == ourPubkey)?.length || 0) > 0
     let metaRoomEv: NDKEvent | null;
     const baseRoomSub = ndk.subscribe({ kinds: [Kinds.NEST_INFO], authors: [roomAddr.pubkey], "#d": [roomAddr.identifier]}, { closeOnEose: false });
     baseRoomSub.on("event", (ev) => {
         baseRoomEv = ev;
+        const authedKeys: string[] = []
+        baseRoomEv!.getMatchingTags("moderator")?.filter((t) => authedKeys.push(t[1]))
+        console.log(authedKeys)
+        if (metaRoomSub) metaRoomSub.stop();
+        subToMetaEvents(authedKeys)
         baseRoomPresent()
     });
-    let metaRoomSub;
+    let metaRoomSub: NDKSubscription | null = null;
     function subToMetaEvents(authors: string[]) {
         metaRoomSub = ndk.subscribe({kinds: [Kinds.NEST_METADATA], authors, "#d": [roomAddr.identifier]}, {closeOnEose: false});
         metaRoomSub.on("event", (ev) => {
@@ -51,7 +56,7 @@
             stageMembers = stageMembers
         });
     }
-    subToMetaEvents([roomAddr.pubkey])
+
     // meta values
     let roomTitle = ""
     let roomDesc = ""
