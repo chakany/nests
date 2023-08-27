@@ -242,8 +242,8 @@
     // unsub on destroy
     onDestroy(() => {
         baseRoomSub.stop();
-        metaRoomSub.stop();
-        roomPresenceSub.stop();
+        metaRoomSub?.stop();
+        roomPresenceSub?.stop();
         // TODO: set presence to not present
         // TODO: also clear the broadcast interval
         clearInterval(interval);
@@ -295,7 +295,7 @@
     <button class="button-primary" on:click={() => editDialog.showModal()}>Edit Room</button>
 
     <span on:click={broadcastPresence}>
-        {#if metaRoomEv.getMatchingTags('stage').filter((t) => t[1] === ourPubkey).length > 0}
+        {#if metaRoomEv?.getMatchingTags('stage').filter((t) => t[1] === ourPubkey).length > 0}
             {#if onStage}
                 <button class="button-primary" on:click={() => (onStage = false)}
                     >Leave Stage</button
