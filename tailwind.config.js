@@ -12,6 +12,9 @@ export default {
                         fontVariationSettings: '"opsz" 32'
                     }
                 ]
+            },
+            colors: {
+                'accent-dark': '#212121'
             }
         }
     },

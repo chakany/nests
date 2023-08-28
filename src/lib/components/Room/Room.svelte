@@ -8,7 +8,11 @@
     import { nip19 } from 'nostr-tools';
     import { Kinds, type RoomMember, type StageMember } from '$lib/utils/constants';
     import Profile from '$lib/components/Room/Profile.svelte';
+    import ProfileGrid from '$lib/components/Room/ProfileGrid.svelte';
     import { Name, RelayList } from '@nostr-dev-kit/ndk-svelte-components';
+    import Fa from 'svelte-fa';
+    import { faGear } from '@fortawesome/free-solid-svg-icons';
+    import showdown from 'showdown';
 
     const ndk = get(ndkStore);
     const loadedDate = new Date(); // see StageMember
@@ -38,6 +42,7 @@
         subToMetaEvents(authedKeys);
         baseRoomPresent();
     });
+    const converter = new showdown.Converter();
     let metaRoomSub: NDKSubscription | null = null;
     function subToMetaEvents(authors: string[]) {
         metaRoomSub = ndk.subscribe(
@@ -47,7 +52,7 @@
         metaRoomSub.on('event', (ev) => {
             metaRoomEv = ev;
             roomTitle = ev.getMatchingTags('title')[0][1] || '';
-            roomDesc = ev.getMatchingTags('desc')[0][1] || '';
+            roomDesc = converter.makeHtml(ev.getMatchingTags('desc')[0][1] || '');
             const permittedSpeakers = ev.getMatchingTags('stage');
             const oldStage = new Map(stageMembers);
             stageMembers.clear(); // to clearout everyone that should be there
@@ -252,143 +257,162 @@
 
 {#if baseRoomEv}
     <RelayList {ndk} />
-    <div class="flex flex-col">
-        <span>ROOM TITLE: {roomTitle}</span>
-        <span>ROOM DESC: {roomDesc}</span>
-        <span>ROOM ALIAS: {baseRoomEv.getMatchingTags('alias')[0][1]}</span>
-        <span>AUDIO SERVER: {baseRoomEv.getMatchingTags('audio_server')[0][1]}</span>
-        <span>
-            MODERATORS:
-            {#each baseRoomEv.getMatchingTags('moderator') as mod}
-                {mod[1]},
-            {/each}
-        </span>
-    </div>
-    <Modal bind:dialog={editDialog}>
-        <div class="flex flex-col gap-1">
-            <div class="flex flex-col">
-                <h1>Room Settings</h1>
-                <span>All fields are optional</span>
+    <div class="flex flex-col gap-8 px-4">
+        <div class="flex flex-col px-6 py-4 rounded-2xl border-accent-dark bg-accent-dark gap-2">
+            <div class="flex">
+                <span class="font-semibold my-auto">{roomTitle}</span>
+                {#if isModerator}
+                    <span class="my-auto ml-auto" on:click={() => editDialog.showModal()}
+                        ><Fa icon={faGear} /></span
+                    >
+                {/if}
             </div>
-            <div class="flex flex-col gap-5">
+            <span class="text-gray-400">
+                {@html roomDesc}
+            </span>
+        </div>
+        <Modal bind:dialog={editDialog}>
+            <div class="flex flex-col gap-1">
                 <div class="flex flex-col">
-                    <h3>Pick a topic to talk about</h3>
-                    <input bind:value={roomTitle} class="text-black" />
+                    <h1>Room Settings</h1>
+                    <span>All fields are optional</span>
                 </div>
-                <div class="flex flex-col">
-                    <h3>Describe the room (supports markdown)</h3>
-                    <input bind:value={roomDesc} class="text-black" />
+                <div class="flex flex-col gap-5">
+                    <div class="flex flex-col">
+                        <h3>Pick a topic to talk about</h3>
+                        <input bind:value={roomTitle} class="text-black" />
+                    </div>
+                    <div class="flex flex-col">
+                        <h3>Describe the room (supports markdown)</h3>
+                        <input bind:value={roomDesc} class="text-black" />
+                    </div>
                 </div>
             </div>
+            <div class="flex gap-2">
+                <button class="button-secondary" on:click={editDialog.close()}>Cancel</button>
+                <button
+                    class="button-primary"
+                    on:click={() => {
+                        editDialog.close();
+                        publishRoomMeta();
+                    }}>Done</button
+                >
+            </div>
+        </Modal>
+        <div class="flex flex-col gap-4">
+            <ProfileGrid>
+                {#each Array.from(stageMembers).sort((a, b) => {
+                    if (a[0] === ourPubkey) return -1; // Move the specific key to the front
+                    if (b[0] === ourPubkey) return 1;
+                    return 0;
+                }) as [id, mem]}
+                    {#if mem.lastOnStage}
+                        <Profile {ourPubkey} {ndk} profile={roomMembers.get(id)} stage={mem} />
+                    {/if}
+                {/each}
+            </ProfileGrid>
+            <span class="text-center text-gray-500 font-semibold uppercase">Audience</span>
+            <ProfileGrid>
+                {#each Array.from(roomMembers).sort((a, b) => {
+                    if (a[0] === ourPubkey) return -1; // Move the specific key to the front
+                    if (b[0] === ourPubkey) return 1;
+                    return 0;
+                }) as [id, mem]}
+                    {#if !!!stageMembers.get(id)?.lastOnStage}
+                        <Profile {ourPubkey} {ndk} profile={mem} />
+                    {/if}
+                {/each}
+            </ProfileGrid>
         </div>
-        <div class="flex gap-2">
-            <button class="button-secondary" on:click={editDialog.close()}>Cancel</button>
-            <button
-                class="button-primary"
-                on:click={() => {
-                    editDialog.close();
-                    publishRoomMeta();
-                }}>Done</button
-            >
-        </div>
-    </Modal>
-    <button class="button-primary" on:click={() => editDialog.showModal()}>Edit Room</button>
-
-    <span on:click={broadcastPresence}>
-        {#if metaRoomEv?.getMatchingTags('stage').filter((t) => t[1] === ourPubkey).length > 0}
-            {#if onStage}
-                <button class="button-primary" on:click={() => (onStage = false)}
-                    >Leave Stage</button
+        <span on:click={broadcastPresence}>
+            {#if metaRoomEv?.getMatchingTags('stage').filter((t) => t[1] === ourPubkey).length > 0}
+                {#if onStage}
+                    <button class="button-primary" on:click={() => (onStage = false)}
+                        >Leave Stage</button
+                    >
+                {:else}
+                    <button class="button-primary" on:click={() => (onStage = true)}
+                        >Join Stage</button
+                    >
+                {/if}
+            {/if}
+            {#if handRaised}
+                <button class="button-primary" on:click={() => (handRaised = false)}
+                    >Lower Hand</button
                 >
             {:else}
-                <button class="button-primary" on:click={() => (onStage = true)}>Join Stage</button>
+                <button class="button-primary" on:click={() => (handRaised = true)}
+                    >Raise Hand</button
+                >
             {/if}
-        {/if}
-        {#if handRaised}
-            <button class="button-primary" on:click={() => (handRaised = false)}>Lower Hand</button>
-        {:else}
-            <button class="button-primary" on:click={() => (handRaised = true)}>Raise Hand</button>
-        {/if}
-    </span>
+        </span>
 
-    {#if isModerator}
-        <button class="button-primary" on:click={() => stageDialog.showModal()}
-            >Stage Settings</button
-        >
-        <Modal bind:dialog={stageDialog}>
-            <div class="flex flex-col">
-                {#each [...roomMembers] as [id, mem]}
-                    <div class="flex gap-3">
-                        <Name {ndk} npub={mem.user.npub} />
-                        {#if metaRoomEv && metaRoomEv
-                                .getMatchingTags('stage')
-                                .filter((t) => t[1] === id).length > 0}
-                            <button class="button-primary" on:click={() => toggleStage(id)}
-                                >Remove Stage Permission</button
-                            >
-                        {:else}
-                            <button class="button-primary" on:click={() => toggleStage(id)}
-                                >Give Stage Permission</button
-                            >
-                        {/if}
-                    </div>
-                {/each}
-            </div>
-            <div class="flex gap-2">
-                <button
-                    class="button-primary"
-                    on:click={() => {
-                        stageDialog.close();
-                    }}>Done</button
-                >
-            </div>
-        </Modal>
-    {/if}
-
-    {#if baseRoomEv?.pubkey === ourPubkey}
-        <button class="button-primary" on:click={() => moderatorDialog.showModal()}
-            >Appoint Moderator</button
-        >
-        <Modal bind:dialog={moderatorDialog}>
-            <div class="flex flex-col">
-                {#each [...roomMembers] as [id, mem]}
-                    <div class="flex gap-3">
-                        <Name {ndk} npub={mem.user.npub} />
-                        {#if baseRoomEv && baseRoomEv
-                                .getMatchingTags('moderator')
-                                .filter((t) => t[1] === id).length > 0}
-                            <button class="button-primary" on:click={() => toggleMod(id)}
-                                >Remove Moderator</button
-                            >
-                        {:else}
-                            <button class="button-primary" on:click={() => toggleMod(id)}
-                                >Add Moderator</button
-                            >
-                        {/if}
-                    </div>
-                {/each}
-            </div>
-            <div class="flex gap-2">
-                <button
-                    class="button-primary"
-                    on:click={() => {
-                        moderatorDialog.close();
-                    }}>Done</button
-                >
-            </div>
-        </Modal>
-    {/if}
-
-    <h2>Stage</h2>
-    {#each [...stageMembers] as [id, mem]}
-        {#if mem.lastOnStage}
-            <Profile {ndk} profile={roomMembers.get(id)} stage={mem} />
+        {#if isModerator}
+            <button class="button-primary" on:click={() => stageDialog.showModal()}
+                >Stage Settings</button
+            >
+            <Modal bind:dialog={stageDialog}>
+                <div class="flex flex-col">
+                    {#each [...roomMembers] as [id, mem]}
+                        <div class="flex gap-3">
+                            <Name {ndk} npub={mem.user.npub} />
+                            {#if metaRoomEv && metaRoomEv
+                                    .getMatchingTags('stage')
+                                    .filter((t) => t[1] === id).length > 0}
+                                <button class="button-primary" on:click={() => toggleStage(id)}
+                                    >Remove Stage Permission</button
+                                >
+                            {:else}
+                                <button class="button-primary" on:click={() => toggleStage(id)}
+                                    >Give Stage Permission</button
+                                >
+                            {/if}
+                        </div>
+                    {/each}
+                </div>
+                <div class="flex gap-2">
+                    <button
+                        class="button-primary"
+                        on:click={() => {
+                            stageDialog.close();
+                        }}>Done</button
+                    >
+                </div>
+            </Modal>
         {/if}
-    {/each}
-    <h2>Audience</h2>
-    {#each [...roomMembers] as [id, mem]}
-        {#if !!!stageMembers.get(id)?.lastOnStage}
-            <Profile {ndk} profile={mem} />
+
+        {#if baseRoomEv?.pubkey === ourPubkey}
+            <button class="button-primary" on:click={() => moderatorDialog.showModal()}
+                >Appoint Moderator</button
+            >
+            <Modal bind:dialog={moderatorDialog}>
+                <div class="flex flex-col">
+                    {#each [...roomMembers] as [id, mem]}
+                        <div class="flex gap-3">
+                            <Name {ndk} npub={mem.user.npub} />
+                            {#if baseRoomEv && baseRoomEv
+                                    .getMatchingTags('moderator')
+                                    .filter((t) => t[1] === id).length > 0}
+                                <button class="button-primary" on:click={() => toggleMod(id)}
+                                    >Remove Moderator</button
+                                >
+                            {:else}
+                                <button class="button-primary" on:click={() => toggleMod(id)}
+                                    >Add Moderator</button
+                                >
+                            {/if}
+                        </div>
+                    {/each}
+                </div>
+                <div class="flex gap-2">
+                    <button
+                        class="button-primary"
+                        on:click={() => {
+                            moderatorDialog.close();
+                        }}>Done</button
+                    >
+                </div>
+            </Modal>
         {/if}
-    {/each}
+    </div>
 {/if}
