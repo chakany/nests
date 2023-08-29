@@ -2,6 +2,7 @@
 export default {
     darkMode: 'media',
     content: ['./src/**/*.{html,js,svelte,ts}'],
+    important: true,
     theme: {
         extend: {
             fontFamily: {

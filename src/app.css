@@ -9,3 +9,8 @@
 .button-secondary {
     @apply px-3 py-1 text-white bg-slate-100/20 rounded-full hover:bg-slate-100/30 border border-white/60;
 }
+
+.border-nests-gradient {
+    background: linear-gradient(to right, #212121, #212121) padding-box,
+                linear-gradient(to right, #F158C0, #6E49F5) border-box;
+}
