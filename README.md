@@ -4,7 +4,9 @@ Nostr Nests is an audio space for chatting, brainstorming, debating, jamming, mi
 
 ## Developing
 
-Once you've created a project and installed dependencies with `npm install`, start a development server:
+Once you've created a project and installed dependencies with `pnpm install`, start a development server:
+
+If you use `npm`, you're going to have a bad time.
 
 ```bash
 pnpm dev
