@@ -9,7 +9,7 @@
     import { Kinds, type RoomMember, type StageMember } from '$lib/utils/constants';
     import Profile from '$lib/components/Room/Profile.svelte';
     import ProfileGrid from '$lib/components/Room/ProfileGrid.svelte';
-    import MenuBar from "$lib/components/Room/MenuBar.svelte";
+    import MenuBar from '$lib/components/Room/MenuBar.svelte';
     import { Name, RelayList } from '@nostr-dev-kit/ndk-svelte-components';
     import Fa from 'svelte-fa';
     import { faGear } from '@fortawesome/free-solid-svg-icons';
@@ -418,7 +418,7 @@
     </div>
     <div class="absolute bottom-0 left-1/2 mb-4">
         <div class="relative -left-1/2">
-            <MenuBar bind:handRaised={handRaised} bind:onStage={onStage} broadcastPresence={broadcastPresence} />
+            <MenuBar bind:handRaised bind:onStage {broadcastPresence} />
         </div>
     </div>
 {/if}
