@@ -1,5 +1,6 @@
 <script lang="ts">
-    import Fa from 'svelte-fa';
+    import Icon from '$lib/components/Room/MenuBarIcon.svelte';
+    import NDK from '$lib/stores/ndk';
     import {
         faArrowRightFromBracket,
         faCog,
@@ -9,9 +10,9 @@
         faFaceSmile,
         faWalkieTalkie
     } from '@fortawesome/free-solid-svg-icons';
-    import NDK from '$lib/stores/ndk';
+    import Fa from 'svelte-fa';
     import { get } from 'svelte/store';
-    import Icon from '$lib/components/Room/MenuBarIcon.svelte';
+
     const ndk = get(NDK);
 
     // TODO: hook into audio server

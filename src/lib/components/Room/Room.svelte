@@ -1,19 +1,19 @@
 <script lang="ts">
-    import Modal from '$lib/components/Modal.svelte';
     import { page } from '$app/stores';
-    import { onDestroy } from 'svelte';
-    import ndkStore from '$lib/stores/ndk';
-    import { get } from 'svelte/store';
-    import { NDKEvent, NDKSubscription } from '@nostr-dev-kit/ndk';
-    import { nip19 } from 'nostr-tools';
-    import { Kinds, type RoomMember, type StageMember } from '$lib/utils/constants';
+    import Modal from '$lib/components/Modal.svelte';
+    import MenuBar from '$lib/components/Room/MenuBar.svelte';
     import Profile from '$lib/components/Room/Profile.svelte';
     import ProfileGrid from '$lib/components/Room/ProfileGrid.svelte';
-    import MenuBar from '$lib/components/Room/MenuBar.svelte';
-    import { Name, RelayList } from '@nostr-dev-kit/ndk-svelte-components';
-    import Fa from 'svelte-fa';
+    import ndkStore from '$lib/stores/ndk';
+    import { Kinds, type RoomMember, type StageMember } from '$lib/utils/constants';
     import { faGear } from '@fortawesome/free-solid-svg-icons';
+    import { NDKEvent, NDKKind, NDKSubscription } from '@nostr-dev-kit/ndk';
+    import { Name, RelayList } from '@nostr-dev-kit/ndk-svelte-components';
+    import { nip19 } from 'nostr-tools';
     import showdown from 'showdown';
+    import { onDestroy } from 'svelte';
+    import Fa from 'svelte-fa';
+    import { get } from 'svelte/store';
 
     const ndk = get(ndkStore);
     const loadedDate = new Date(); // see StageMember
@@ -31,7 +31,11 @@
         0;
     let metaRoomEv: NDKEvent | null;
     const baseRoomSub = ndk.subscribe(
-        { kinds: [Kinds.NEST_INFO], authors: [roomAddr.pubkey], '#d': [roomAddr.identifier] },
+        {
+            kinds: [Kinds.NEST_INFO as NDKKind],
+            authors: [roomAddr.pubkey],
+            '#d': [roomAddr.identifier]
+        },
         { closeOnEose: false }
     );
     baseRoomSub.on('event', (ev) => {
@@ -47,7 +51,7 @@
     let metaRoomSub: NDKSubscription | null = null;
     function subToMetaEvents(authors: string[]) {
         metaRoomSub = ndk.subscribe(
-            { kinds: [Kinds.NEST_METADATA], authors, '#d': [roomAddr.identifier] },
+            { kinds: [Kinds.NEST_METADATA as NDKKind], authors, '#d': [roomAddr.identifier] },
             { closeOnEose: false }
         );
         metaRoomSub.on('event', (ev) => {
@@ -145,7 +149,7 @@
 
     let onStage = false;
     let handRaised = false;
-    let ourPubkey = ''; // A little hackey? TODO: FIX
+    let ourPubkey = ''; // A little hacky? TODO: FIX
     async function broadcastPresence() {
         try {
             console.log('attempting to rebroadcast presence');
@@ -193,7 +197,7 @@
         roomPresenceSub = ndk.subscribe(
             {
                 since: unixTimestamp - 30,
-                kinds: [Kinds.NEST_PRESENCE],
+                kinds: [Kinds.NEST_PRESENCE as NDKKind],
                 '#d': [
                     `${Kinds.NEST_INFO}:${baseRoomEv?.pubkey}:${
                         baseRoomEv?.getMatchingTags('d')[0][1]
@@ -263,6 +267,7 @@
             <div class="flex">
                 <span class="font-semibold my-auto">{roomTitle}</span>
                 {#if isModerator}
+                    <!-- svelte-ignore a11y-click-events-have-key-events -->
                     <span class="my-auto ml-auto" on:click={() => editDialog.showModal()}
                         ><Fa icon={faGear} /></span
                     >
@@ -319,14 +324,17 @@
                     if (b[0] === ourPubkey) return 1;
                     return 0;
                 }) as [id, mem]}
-                    {#if !!!stageMembers.get(id)?.lastOnStage}
-                        <Profile {ourPubkey} {ndk} profile={mem} />
+                    {#if !stageMembers.get(id)?.lastOnStage}
+                        <Profile {ourPubkey} {ndk} profile={mem} stage={undefined} />
                     {/if}
                 {/each}
             </ProfileGrid>
         </div>
+        <!-- svelte-ignore a11y-click-events-have-key-events -->
         <span on:click={broadcastPresence}>
-            {#if metaRoomEv?.getMatchingTags('stage').filter((t) => t[1] === ourPubkey).length > 0}
+            {#if metaRoomEv && metaRoomEv
+                    .getMatchingTags('stage')
+                    .filter((t) => t[1] === ourPubkey).length > 0}
                 {#if onStage}
                     <button class="button-primary" on:click={() => (onStage = false)}
                         >Leave Stage</button

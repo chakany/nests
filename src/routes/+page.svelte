@@ -1,10 +1,9 @@
 <script lang="ts">
-    import { currentUser } from '$lib/stores/currentUser';
-    import ndkStore from '$lib/stores/ndk';
-    import { get } from 'svelte/store';
     import { goto } from '$app/navigation';
-
+    import ndkStore from '$lib/stores/ndk';
+    import { Kinds } from '$lib/utils/constants';
     import { NDKEvent } from '@nostr-dev-kit/ndk';
+    import { get } from 'svelte/store';
 
     const ndk = get(ndkStore);
     let name = 'test';
@@ -17,7 +16,7 @@
             return;
         }
         const ev = new NDKEvent(ndk);
-        ev.kind = 38001; // TODO: check if this is the final kind
+        ev.kind = Kinds.NEST_INFO;
         ev.tags = [
             ['alias', name],
             ['d', name],

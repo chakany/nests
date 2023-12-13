@@ -1,6 +1,6 @@
+import { browser } from '$app/environment';
 import ndkStore from '$lib/stores/ndk';
 import { get } from 'svelte/store';
-import { browser } from '$app/environment';
 
 export async function load() {
     const ndk = get(ndkStore);

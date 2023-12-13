@@ -1,8 +1,8 @@
-import ndkStore from '$lib/stores/ndk';
 import { currentUser } from '$lib/stores/currentUser';
-import { get } from 'svelte/store';
-import { NDKNip07Signer } from '@nostr-dev-kit/ndk';
+import ndkStore from '$lib/stores/ndk';
 import { dateTomorrow } from './helpers';
+import { NDKNip07Signer } from '@nostr-dev-kit/ndk';
+import { get } from 'svelte/store';
 
 export async function authenticate(e: Event) {
     const ndk = get(ndkStore);

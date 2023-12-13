@@ -1,13 +1,13 @@
 <script lang="ts">
-    import type NDK from '@nostr-dev-kit/ndk';
-    import { Avatar, Name } from '@nostr-dev-kit/ndk-svelte-components';
     import type { RoomMember, StageMember } from '$lib/utils/constants';
     import { faMicrophoneSlash } from '@fortawesome/free-solid-svg-icons';
+    import type NDK from '@nostr-dev-kit/ndk';
+    import { Avatar, Name } from '@nostr-dev-kit/ndk-svelte-components';
     import Fa from 'svelte-fa';
 
     export let ndk: NDK;
     export let profile: RoomMember | undefined;
-    export let stage: StageMember | undefined; // Doesnt need to be provided by default.
+    export let stage: StageMember | undefined; // doesn't need to be provided by default.
     export let ourPubkey: string = '';
 
     $: onStage = stage && stage!.lastOnStage === true;

@@ -1,10 +1,10 @@
 <script lang="ts">
-    import ndk from '$lib/stores/ndk';
-    import { currentUser } from '$lib/stores/currentUser';
-    import { authenticate, clearSession } from '$lib/utils/auth';
-    import { Popover, PopoverButton, PopoverPanel } from '@rgossiaux/svelte-headlessui';
     import { goto } from '$app/navigation';
+    import { currentUser } from '$lib/stores/currentUser';
+    import ndk from '$lib/stores/ndk';
+    import { authenticate, clearSession } from '$lib/utils/auth';
     import { Avatar } from '@nostr-dev-kit/ndk-svelte-components';
+    import { Popover, PopoverButton, PopoverPanel } from '@rgossiaux/svelte-headlessui';
 
     function login(e: Event) {
         authenticate(e);
