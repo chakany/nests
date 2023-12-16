@@ -1,5 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { NDKUser } from '@nostr-dev-kit/ndk';
 
+// eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace Kinds {
     export const NEST_INFO = 38001;
     export const NEST_METADATA = 38002;

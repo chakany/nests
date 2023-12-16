@@ -1,5 +1,3 @@
-import { nip19 } from 'nostr-tools';
-
 export function unixTimeNow() {
     return Math.floor(new Date().getTime() / 1000);
 }

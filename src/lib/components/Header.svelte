@@ -6,8 +6,8 @@
     import { Avatar } from '@nostr-dev-kit/ndk-svelte-components';
     import { Popover, PopoverButton, PopoverPanel } from '@rgossiaux/svelte-headlessui';
 
-    function login(e: Event) {
-        authenticate(e);
+    function login() {
+        authenticate();
     }
 
     function logout(e: Event) {

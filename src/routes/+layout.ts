@@ -1,13 +1,10 @@
-import { browser } from '$app/environment';
 import ndkStore from '$lib/stores/ndk';
 import { get } from 'svelte/store';
 
 export async function load() {
     const ndk = get(ndkStore);
     ndk.connect()
-        .then(() => {
-            // console.log('connected');
-        })
+        .then()
         .catch((e) => {
             console.error(e);
         });
