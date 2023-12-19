@@ -77,15 +77,6 @@
                     aria-labelledby="user-menu-button"
                     tabindex="-1"
                 >
-                    <!-- <a
-                        href={`/${$currentUser.npub}`}
-                        class="block px-3 py-1 text-sm leading-6 hover:bg-slate-50 dark:hover:bg-slate-600"
-                        role="menuitem"
-                        tabindex="-1"
-                        id="user-menu-item-0"
-                    >
-                        Your profile
-                    </a> -->
                     <button
                         on:click={() => logout}
                         on:touchend={() => logout}
