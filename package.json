@@ -40,7 +40,6 @@
         "@fortawesome/free-solid-svg-icons": "^6.5.1",
         "@nostr-dev-kit/ndk": "^0.8.23",
         "@nostr-dev-kit/ndk-svelte-components": "^0.8.22",
-        "@rgossiaux/svelte-headlessui": "^1.0.2",
         "mediasoup": "^3.13.6",
         "nostr-tools": "^1.17.0",
         "showdown": "^2.1.0",
