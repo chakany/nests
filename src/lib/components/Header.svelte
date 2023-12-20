@@ -9,8 +9,8 @@
 
     let profileMenuVisible: boolean = false;
 
-    function login(e: Event) {
-        authenticate(e);
+    function login() {
+        authenticate();
     }
 
     function logout(e: Event) {

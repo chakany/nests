@@ -1,6 +1,5 @@
 <script lang="ts">
     import Icon from '$lib/components/Room/MenuBarIcon.svelte';
-    import NDK from '$lib/stores/ndk';
     import {
         faArrowRightFromBracket,
         faCog,
@@ -11,9 +10,6 @@
         faWalkieTalkie
     } from '@fortawesome/free-solid-svg-icons';
     import Fa from 'svelte-fa';
-    import { get } from 'svelte/store';
-
-    const ndk = get(NDK);
 
     // TODO: hook into audio server
     export let muted = true;
@@ -64,10 +60,7 @@
     >
         <Fa icon={faHand} />
     </Icon>
-    <Icon
-        padding="p-2.5"
-        borderColor={true ? 'border-[#4F4F4F]' : 'border-nests-gradient border-transparent'}
-    >
+    <Icon padding="p-2.5" borderColor={'border-[#4F4F4F]'}>
         <Fa icon={faFaceSmile} />
     </Icon>
 </div>

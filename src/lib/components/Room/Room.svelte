@@ -1,4 +1,5 @@
 <script lang="ts">
+    /* eslint-disable  @typescript-eslint/no-explicit-any */
     import { page } from '$app/stores';
     import Modal from '$lib/components/Modal.svelte';
     import MenuBar from '$lib/components/Room/MenuBar.svelte';
@@ -41,8 +42,8 @@
     baseRoomSub.on('event', (ev) => {
         baseRoomEv = ev;
         const authedKeys: string[] = [];
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         baseRoomEv!.getMatchingTags('moderator')?.filter((t) => authedKeys.push(t[1]));
-        console.log(authedKeys);
         if (metaRoomSub) metaRoomSub.stop();
         subToMetaEvents(authedKeys);
         baseRoomPresent();
@@ -60,7 +61,7 @@
             roomDesc = converter.makeHtml(ev.getMatchingTags('desc')[0][1] || '');
             const permittedSpeakers = ev.getMatchingTags('stage');
             const oldStage = new Map(stageMembers);
-            stageMembers.clear(); // to clearout everyone that should be there
+            stageMembers.clear(); // to clear out everyone that should be there
             for (const entry of permittedSpeakers) {
                 const oldEntry = oldStage.get(entry[1]);
                 const perms = entry[2]?.join(',');
@@ -152,7 +153,6 @@
     let ourPubkey = ''; // A little hacky? TODO: FIX
     async function broadcastPresence() {
         try {
-            console.log('attempting to rebroadcast presence');
             if (!ndk.assertSigner()) return; // I think this should be awaited? but when I do await it the app doesn't try to sign even if one is present.
             const presEv = new NDKEvent(ndk);
             presEv.kind = Kinds.NEST_PRESENCE;
@@ -168,7 +168,6 @@
                 ['on_stage', onStage.toString()]
             ];
 
-            console.log('rebroadcasting our presence');
             await presEv.publish();
             ourPubkey = presEv.pubkey;
         } catch (error) {
@@ -231,7 +230,6 @@
                 });
             }
             cleanPresenceList();
-            console.log('got presence event', ev);
         });
     }
 
@@ -246,10 +244,11 @@
                 roomMembers.delete(id);
             }
         }
+
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         for (const [id, mem] of stageMembers) roomMembers = roomMembers; // reassign for bullshit svelte reactivity
     }
 
-    // unsub on destroy
     onDestroy(() => {
         baseRoomSub.stop();
         metaRoomSub?.stop();
@@ -268,13 +267,14 @@
                 <span class="font-semibold my-auto">{roomTitle}</span>
                 {#if isModerator}
                     <!-- svelte-ignore a11y-click-events-have-key-events -->
+                    <!-- svelte-ignore a11y-no-static-element-interactions -->
                     <span class="my-auto ml-auto" on:click={() => editDialog.showModal()}
                         ><Fa icon={faGear} /></span
                     >
                 {/if}
             </div>
             <span class="text-gray-400">
-                {@html roomDesc}
+                {roomDesc}
             </span>
         </div>
         <Modal bind:dialog={editDialog}>
@@ -331,6 +331,7 @@
             </ProfileGrid>
         </div>
         <!-- svelte-ignore a11y-click-events-have-key-events -->
+        <!-- svelte-ignore a11y-no-static-element-interactions -->
         <span on:click={broadcastPresence}>
             {#if metaRoomEv && metaRoomEv
                     .getMatchingTags('stage')

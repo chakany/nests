@@ -1,10 +1,11 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { currentUser } from '$lib/stores/currentUser';
 import ndkStore from '$lib/stores/ndk';
 import { dateTomorrow } from './helpers';
 import { NDKNip07Signer } from '@nostr-dev-kit/ndk';
 import { get } from 'svelte/store';
 
-export async function authenticate(e: Event) {
+export async function authenticate() {
     const ndk = get(ndkStore);
     let signer;
     try {
@@ -12,7 +13,7 @@ export async function authenticate(e: Event) {
         ndk.signer = signer;
         ndkStore.set(ndk);
         signer.user().then(async (ndkUser) => {
-            if (!!ndkUser.npub) {
+            if (ndkUser.npub) {
                 ndkUser.ndk = ndk;
                 currentUser.set(ndkUser);
                 window.sessionStorage.setItem('nestsCurrentUser', JSON.stringify(ndkUser));

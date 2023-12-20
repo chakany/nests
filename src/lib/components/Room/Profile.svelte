@@ -8,9 +8,9 @@
     export let ndk: NDK;
     export let profile: RoomMember | undefined;
     export let stage: StageMember | undefined; // doesn't need to be provided by default.
-    export let ourPubkey: string = '';
+    export let ourPubkey = '';
 
-    $: onStage = stage && stage!.lastOnStage === true;
+    $: onStage = stage && stage.lastOnStage === true;
     $: handRaised = profile && profile.handRaised === true;
 </script>
 
